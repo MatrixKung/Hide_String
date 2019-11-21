@@ -41,6 +41,7 @@ inline uint32_t Murmur3(const void *key, int len, unsigned int seed)
 }
 
 constexpr auto time = __TIME__;
+
 constexpr auto seed =
   static_cast<int>(time[7]) + static_cast<int>(time[6]) * 10
   + static_cast<int>(time[4]) * 60 + static_cast<int>(time[3]) * 600
@@ -58,6 +59,7 @@ struct RandomGeneratorString
   static constexpr unsigned lo2 = lo + ((hi & 0x7FFF) << 16);
   static constexpr unsigned hi2 = hi >> 16;
   static constexpr unsigned lo3 = lo2 + hi;
+
  public:
   static constexpr unsigned max = m;
   static constexpr unsigned value = lo3 > m ? lo3 - m : lo3;
@@ -97,6 +99,7 @@ class XTEA3
     res = (base << shift) | (base >> (32 - shift));
     return res;
   };
+
   void xtea3_encipher(unsigned int num_rounds, uint32_t *v, const uint32_t *k)
   {
     unsigned int i;
@@ -119,6 +122,7 @@ class XTEA3
     v[2] = c ^ k[6];
     v[3] = d ^ k[7];
   };
+
   void xtea3_decipher(unsigned int num_rounds, uint32_t *v, const uint32_t *k)
   {
     unsigned int i;
@@ -140,6 +144,7 @@ class XTEA3
     v[1] = b - k[1];
     v[0] = a - k[0];
   };
+
   void xtea3_data_crypt(uint8_t *inout, uint32_t len, bool encrypt, const uint32_t *key)
   {
     static unsigned char dataArray[BLOCK_SIZE];
@@ -171,9 +176,11 @@ class XTEA3
   XTEA3()
   {
   }
+
   ~XTEA3()
   {
   }
+
   uint8_t *data_crypt(const uint8_t *data, const uint32_t key[8], uint32_t size)
   {
     uint32_t size_crypt_tmp = size;
@@ -203,6 +210,7 @@ class XTEA3
     xtea3_data_crypt(data_ptr + 8, size_crypt - 8, true, key);
     return data_ptr;
   }
+
   uint8_t *data_decrypt(const uint8_t *data, const uint32_t key[8], uint32_t size)
   {
     // Get the size of the crypted data and the size of the original
@@ -233,14 +241,17 @@ class XTEA3
     }
     return data_ptr;
   }
+
   uint32_t get_decrypt_size(void)
   {
     return size_decrypt_data;
   }
+
   uint32_t get_crypt_size(void)
   {
     return size_crypt;
   }
+
   void free_ptr(uint8_t *ptr)
   {
     free(ptr);
@@ -255,6 +266,7 @@ class HideString : protected XTEA3
   uint32_t key_for_xtea3[8];
   uint8_t *crypted_str;
   std::array < char, N + 1 > _encrypted;
+
   constexpr char enc(char c) const
   {
     return c ^ _key;
@@ -264,6 +276,7 @@ class HideString : protected XTEA3
   {
     return c ^ _key;
   }
+
  public:
   // Constructor
   template < size_t... Is >
@@ -287,7 +300,6 @@ class HideString : protected XTEA3
     crypted_str = data_crypt((const uint8_t *)_encrypted.data(), key_for_xtea3, N);
   }
 
-  // pointer for decrypted string
   __forceinline uint8_t *decrypt(void)
   {
     // key for xtea3
@@ -305,18 +317,16 @@ class HideString : protected XTEA3
       decrypted_str[i] = dec(decrypted_str[i]);
     }
     decrypted_str[N] = '\0';
-    return decrypted_str;
+    return decrypted_str; // pointer for decrypted string
   }
 
-  // pointer for encrypted string
   __forceinline uint8_t *crypt(void)
   {
-    return crypted_str;
+    return crypted_str; // pointer for encrypted string
   }
 
-  // free memory
   __forceinline void str_free(uint8_t *ptr)
   {
-    free(ptr);
+    free(ptr); // free memory
   }
 };
