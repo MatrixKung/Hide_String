@@ -281,9 +281,7 @@ class HideString : protected XTEA3
   // Constructor
   template < size_t... Is >
   constexpr __forceinline HideString(const char *str, std::index_sequence< Is... >)
-    : _key(RandomChar< K >::value),
-
-      _encrypted
+    : _key(RandomChar< K >::value), _encrypted
   {
     enc(str[Is])...
 
