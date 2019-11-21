@@ -178,8 +178,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="murmurhash.cpp" />
-    <ClCompile Include="xtea3.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="murmurhash.h" />
