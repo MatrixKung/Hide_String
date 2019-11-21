@@ -179,12 +179,13 @@ class XTEA3
     uint32_t size_crypt_tmp = size;
     DEBUG_PRINT("CRYPT: \n");
     DEBUG_PRINT("SIZE = %d \n", size);
-    //Выровнить размер буфера до 16-ти (для этого алгоритма)
+    // align to 16
     while ((size_crypt_tmp % 16) != 0)
     {
       size_crypt_tmp++;
     }
-    //Выделить память под выровненный буфер (Плюс восемь байт, что-бы был размер зашифрованных данных и размер оригинальных данных, всё это будет хранится в зашифрованных данных)
+    // Allocate memory for aligned buffer
+    // Plus eight bytes, so that there is the size of the encrypted data and the size of the original data, all this will be stored in the encrypted data
     data_ptr = NULL;
     data_ptr = (uint8_t *)malloc(size_crypt_tmp + 8);
     if (data_ptr == NULL)
@@ -192,19 +193,19 @@ class XTEA3
       DEBUG_PRINT("NO FREE MEM \n");
       return NULL;
     }
-    //Положим в получившийся буфер размер криптованных данных и размер оригинала
+    // Put the size of the crypted data and the size of the original in the resulting buffer
     size_crypt = size_crypt_tmp + 8;
     size_decrypt_data = size;
     memcpy(data_ptr, (char *)&size_crypt, 4);
     memcpy(data_ptr + 4, (char *)&size_decrypt_data, 4);
     memcpy(data_ptr + 8, data, size);
-    //Зашифруем данные
+    // Encrypt data
     xtea3_data_crypt(data_ptr + 8, size_crypt - 8, true, key);
     return data_ptr;
   }
   uint8_t *data_decrypt(const uint8_t *data, const uint32_t key[8], uint32_t size)
   {
-    //Получим размер криптованных данных и размер оригинала
+    // Get the size of the crypted data and the size of the original
     memcpy((char *)&size_crypt, data, 4);
     memcpy((char *)&size_decrypt_data, data + 4, 4);
     DEBUG_PRINT("DECRYPT: \n");
@@ -213,7 +214,7 @@ class XTEA3
     DEBUG_PRINT("size_decrypt_data = %d \n", size_decrypt_data);
     if (size_crypt <= size)
     {
-      //Выделить память для расшифрованных данных
+      // Allocate memory for decrypted data
       data_ptr = NULL;
       data_ptr = (uint8_t *)malloc(size_crypt);
       if (data_ptr == NULL)
@@ -222,7 +223,7 @@ class XTEA3
         return NULL;
       }
       memcpy(data_ptr, data + 8, size_crypt - 8);
-      //Расшифруем данные
+      // Decrypt data
       xtea3_data_crypt(data_ptr, size_crypt - 8, false, key);
     }
     else
