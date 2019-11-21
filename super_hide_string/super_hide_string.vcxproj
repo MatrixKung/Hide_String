@@ -180,9 +180,7 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="murmurhash.h" />
     <ClInclude Include="hide_str.hpp" />
-    <ClInclude Include="xtea3.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

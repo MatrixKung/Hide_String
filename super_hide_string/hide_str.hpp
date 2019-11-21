@@ -1,22 +1,56 @@
 #pragma once
 #include <array>
 #include <cstdarg>
-
-#include "xtea3.h"
-#include "murmurhash.h"
 #include <random>
 
-#define BEGIN_NAMESPACE( x ) namespace x {
-#define END_NAMESPACE }
+#define mmix(h,k) { k *= m; k ^= k >> r; k *= m; h *= m; h ^= k; }
+#define DEBUG_PRINT(m,...) //printf(m,__VA_ARGS__)
+#define BLOCK_SIZE 16
 
-BEGIN_NAMESPACE(StringCompileTime)
+#define HIDE_STR(hide, s) auto hide = HideString<sizeof(s) - 1, __COUNTER__ >(s, std::make_index_sequence<sizeof(s) - 1>())
+#define PRINT_HIDE_STR(s) (HideString<sizeof(s) - 1, __COUNTER__ >(s, std::make_index_sequence<sizeof(s) - 1>()).decrypt())
 
+inline uint32_t Murmur3(const void *key, int len, unsigned int seed)
+{
+  const unsigned int m = 0x5bd1e995;
+  const int r = 24;
+  unsigned int l = len;
+  const unsigned char *data = (const unsigned char *)key;
+  unsigned int h = seed;
+  unsigned int k;
+  while (len >= 4)
+  {
+    k = *(unsigned int *)data;
+    mmix(h, k);
+    data += 4;
+    len -= 4;
+  }
+  unsigned int t = 0;
+  switch (len)
+  {
+    case 3: t ^= data[2] << 16;
+    case 2: t ^= data[1] << 8;
+    case 1: t ^= data[0];
+  };
+  mmix(h, t);
+  mmix(h, l);
+  h ^= h >> 13;
+  h *= m;
+  h ^= h >> 15;
+  return h;
+}
 int randInt() {
   std::random_device random_device; // create object for seeding
   std::mt19937 engine{ random_device() }; // create engine and seed it
   std::uniform_int_distribution<> dist(10000000, 90000000); // create distribution for integers with [1; 9] range
   return dist(engine);
 }
+
+static uint8_t *data_ptr = NULL;
+static uint32_t size_crypt = 0;
+static uint32_t size_decrypt_data = 0;
+
+
 int randkey = randInt();
 
 constexpr auto time = __TIME__;
@@ -60,9 +94,168 @@ struct RandomChar
   static const char value = static_cast<char>(1 + RandomInt < N, 0x7F - 1 >::value);
 };
 
-// Create class for hiding string
+class XTEA3
+{
+ protected:
+  uint32_t rol(uint32_t base, uint32_t shift)
+  {
+    uint32_t res;
+    /* only 5 bits of shift are significant*/
+    shift &= 0x1F;
+    res = (base << shift) | (base >> (32 - shift));
+    return res;
+  };
+  void xtea3_encipher(unsigned int num_rounds, uint32_t *v, const uint32_t *k)
+  {
+    unsigned int i;
+    uint32_t a, b, c, d, sum = 0, t, delta = 0x9E3779B9;
+    sum = 0;
+    a = v[0] + k[0];
+    b = v[1] + k[1];
+    c = v[2] + k[2];
+    d = v[3] + k[3];
+    for (i = 0; i < num_rounds; i++) {
+      a += (((b << 4) + rol(k[(sum % 4) + 4], b)) ^
+            (d + sum) ^ ((b >> 5) + rol(k[sum % 4], b >> 27)));
+      sum += delta;
+      c += (((d << 4) + rol(k[((sum >> 11) % 4) + 4], d)) ^
+            (b + sum) ^ ((d >> 5) + rol(k[(sum >> 11) % 4], d >> 27)));
+      t = a; a = b; b = c; c = d; d = t;
+    }
+    v[0] = a ^ k[4];
+    v[1] = b ^ k[5];
+    v[2] = c ^ k[6];
+    v[3] = d ^ k[7];
+  };
+  void xtea3_decipher(unsigned int num_rounds, uint32_t *v, const uint32_t *k)
+  {
+    unsigned int i;
+    uint32_t a, b, c, d, t, delta = 0x9E3779B9, sum = delta * num_rounds;
+    d = v[3] ^ k[7];
+    c = v[2] ^ k[6];
+    b = v[1] ^ k[5];
+    a = v[0] ^ k[4];
+    for (i = 0; i < num_rounds; i++) {
+      t = d; d = c; c = b; b = a; a = t;
+      c -= (((d << 4) + rol(k[((sum >> 11) % 4) + 4], d)) ^
+            (b + sum) ^ ((d >> 5) + rol(k[(sum >> 11) % 4], d >> 27)));
+      sum -= delta;
+      a -= (((b << 4) + rol(k[(sum % 4) + 4], b)) ^
+            (d + sum) ^ ((b >> 5) + rol(k[sum % 4], b >> 27)));
+    }
+    v[3] = d - k[3];
+    v[2] = c - k[2];
+    v[1] = b - k[1];
+    v[0] = a - k[0];
+  };
+  void xtea3_data_crypt(uint8_t *inout, uint32_t len, bool encrypt, const uint32_t *key)
+  {
+    static unsigned char dataArray[BLOCK_SIZE];
+    for (int i = 0; i < len / BLOCK_SIZE; i++)
+    {
+      memcpy(dataArray, inout, BLOCK_SIZE);
+      if (encrypt)
+        xtea3_encipher(48, (uint32_t *)dataArray, key);
+      else
+        xtea3_decipher(48, (uint32_t *)dataArray, key);
+      memcpy(inout, dataArray, BLOCK_SIZE);
+      inout = inout + BLOCK_SIZE;
+    }
+    if (len % BLOCK_SIZE != 0)
+    {
+      int mod = len % BLOCK_SIZE;
+      int offset = (len / BLOCK_SIZE) * BLOCK_SIZE;
+      uint32_t data[BLOCK_SIZE];
+      memcpy(data, inout + offset, mod);
+      if (encrypt)
+        xtea3_encipher(32, (uint32_t *)data, key);
+      else
+        xtea3_decipher(32, (uint32_t *)data, key);
+      memcpy(inout + offset, data, mod);
+    }
+  }
+
+ public:
+  XTEA3()
+  {
+  }
+  ~XTEA3()
+  {
+  }
+  uint8_t *data_crypt(const uint8_t *data, const uint32_t key[8], uint32_t size)
+  {
+    uint32_t size_crypt_tmp = size;
+    DEBUG_PRINT("CRYPT: \n");
+    DEBUG_PRINT("SIZE = %d \n", size);
+    //Выровнить размер буфера до 16-ти (для этого алгоритма)
+    while ((size_crypt_tmp % 16) != 0)
+    {
+      size_crypt_tmp++;
+    }
+    //Выделить память под выровненный буфер (Плюс восемь байт, что-бы был размер зашифрованных данных и размер оригинальных данных, всё это будет хранится в зашифрованных данных)
+    data_ptr = NULL;
+    data_ptr = (uint8_t *)malloc(size_crypt_tmp + 8);
+    if (data_ptr == NULL)
+    {
+      DEBUG_PRINT("NO FREE MEM \n");
+      return NULL;
+    }
+    //Положим в получившийся буфер размер криптованных данных и размер оригинала
+    size_crypt = size_crypt_tmp + 8;
+    size_decrypt_data = size;
+    memcpy(data_ptr, (char *)&size_crypt, 4);
+    memcpy(data_ptr + 4, (char *)&size_decrypt_data, 4);
+    memcpy(data_ptr + 8, data, size);
+    //Зашифруем данные
+    xtea3_data_crypt(data_ptr + 8, size_crypt - 8, true, key);
+    return data_ptr;
+  }
+  uint8_t *data_decrypt(const uint8_t *data, const uint32_t key[8], uint32_t size)
+  {
+    //Получим размер криптованных данных и размер оригинала
+    memcpy((char *)&size_crypt, data, 4);
+    memcpy((char *)&size_decrypt_data, data + 4, 4);
+    DEBUG_PRINT("DECRYPT: \n");
+    DEBUG_PRINT("SIZE = %d \n", size);
+    DEBUG_PRINT("size_crypt = %d \n", size_crypt);
+    DEBUG_PRINT("size_decrypt_data = %d \n", size_decrypt_data);
+    if (size_crypt <= size)
+    {
+      //Выделить память для расшифрованных данных
+      data_ptr = NULL;
+      data_ptr = (uint8_t *)malloc(size_crypt);
+      if (data_ptr == NULL)
+      {
+        DEBUG_PRINT("NO FREE MEM \n");
+        return NULL;
+      }
+      memcpy(data_ptr, data + 8, size_crypt - 8);
+      //Расшифруем данные
+      xtea3_data_crypt(data_ptr, size_crypt - 8, false, key);
+    }
+    else
+    {
+      DEBUG_PRINT("size_crypt > size \n");
+      return NULL;
+    }
+    return data_ptr;
+  }
+  uint32_t get_decrypt_size(void)
+  {
+    return size_decrypt_data;
+  }
+  uint32_t get_crypt_size(void)
+  {
+    return size_crypt;
+  }
+  void free_ptr(uint8_t *ptr)
+  {
+    free(ptr);
+  }
+};
+
 template <size_t N, int K>
-class HideString : protected xtea3
+class HideString : protected XTEA3
 {
  private:
   const char _key;
@@ -134,7 +327,3 @@ class HideString : protected xtea3
     free(ptr);
   }
 };
-#define HIDE_STR(hide, s) auto hide = StringCompileTime::HideString<sizeof(s) - 1, __COUNTER__ >(s, std::make_index_sequence<sizeof(s) - 1>())
-#define PRINT_HIDE_STR(s) (StringCompileTime::HideString<sizeof(s) - 1, __COUNTER__ >(s, std::make_index_sequence<sizeof(s) - 1>()).decrypt())
-
-END_NAMESPACE
