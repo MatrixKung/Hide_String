@@ -3,6 +3,7 @@
 #include <cstdarg>
 
 #include "xtea3.h"
+#include "trash.h"
 #include "murmurhash.h"
 
 #define BEGIN_NAMESPACE( x ) namespace x {
@@ -82,7 +83,7 @@ class HideString : protected xtea3
   }
   {
     //Получить число, для генерации ключа для xtea3
-    uint32_t value_for_gen_key = _key;
+    uint32_t value_for_gen_key = tresh_gen(_key);
     //Генерация пароля для XTEA3
     for (int i = 0; i < 8; i++)
     {
@@ -96,7 +97,7 @@ class HideString : protected xtea3
   __forceinline uint8_t *decrypt(void)
   {
     //Получить число, для генерации ключа для xtea3
-    uint32_t value_for_gen_key = _key;
+    uint32_t value_for_gen_key = tresh_gen(_key);
     //Генерация пароля для XTEA3
     for (int i = 0; i < 8; i++)
     {

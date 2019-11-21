@@ -183,6 +183,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="murmurhash.h" />
+    <ClInclude Include="trash.h" />
     <ClInclude Include="hide_str.hpp" />
     <ClInclude Include="xtea3.h" />
   </ItemGroup>
