@@ -5,17 +5,15 @@
 
 int main()
 {
-  //ВАРИАНТ1:
-  //Создаём класс с зашифрованной строкой
+  // Demo 1
   HIDE_STR(hide_str, "Hide String1");
-  //Получаем указатель на расшифрованную строку
   uint8_t *decrypt_string = hide_str.decrypt();
   MessageBoxA(0, (LPCSTR)decrypt_string, (LPCSTR)decrypt_string, MB_OK);
-  //Освобождаем память
+  // free memory
   hide_str.str_free(decrypt_string);
-  //ВАРИАНТ2:
-  //Более простой
+  // Demo 2
+  // It is simple like a magic
   MessageBoxA(0, (LPCSTR)PRINT_HIDE_STR("Hide String2"), (LPCSTR)PRINT_HIDE_STR("Hide String2"), MB_OK);
-  //Метка, что-бы было видно отличие в декомпиляторе
+  // test for no hide strings
   MessageBoxA(0, "NO Hide String1", "NO Hide String2", MB_OK);
 }
