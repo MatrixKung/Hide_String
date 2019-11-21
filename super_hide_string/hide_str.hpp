@@ -4,11 +4,20 @@
 
 #include "xtea3.h"
 #include "murmurhash.h"
+#include <random>
 
 #define BEGIN_NAMESPACE( x ) namespace x {
 #define END_NAMESPACE }
 
 BEGIN_NAMESPACE(StringCompileTime)
+
+int randInt() {
+  std::random_device random_device; // create object for seeding
+  std::mt19937 engine{ random_device() }; // create engine and seed it
+  std::uniform_int_distribution<> dist(10000000, 90000000); // create distribution for integers with [1; 9] range
+  return dist(engine);
+}
+int randkey = randInt();
 
 constexpr auto time = __TIME__;
 constexpr auto seed =
@@ -82,7 +91,7 @@ class HideString : protected xtea3
   }
   {
     //Получить число, для генерации ключа для xtea3
-    uint32_t value_for_gen_key = _key;
+    uint32_t value_for_gen_key = randkey;
     //Генерация пароля для XTEA3
     for (int i = 0; i < 8; i++)
     {
@@ -96,7 +105,7 @@ class HideString : protected xtea3
   __forceinline uint8_t *decrypt(void)
   {
     //Получить число, для генерации ключа для xtea3
-    uint32_t value_for_gen_key = _key;
+    uint32_t value_for_gen_key = randkey;
     //Генерация пароля для XTEA3
     for (int i = 0; i < 8; i++)
     {
