@@ -1,12 +1,9 @@
 ﻿#include <iostream>
 
 #include "hide_str.hpp"
+#include <windows.h>
 
-//Примеры использования
-int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
-                      _In_opt_ HINSTANCE hPrevInstance,
-                      _In_ LPWSTR    lpCmdLine,
-                      _In_ int       nCmdShow)
+int main()
 {
   //ВАРИАНТ1:
   //Создаём класс с зашифрованной строкой
