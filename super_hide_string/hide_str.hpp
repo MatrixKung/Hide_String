@@ -60,7 +60,7 @@ struct RandomChar
   static const char value = static_cast<char>(1 + RandomInt < N, 0x7F - 1 >::value);
 };
 
-//Создаем класс для скрытия строки
+// Create class for hiding string
 template <size_t N, int K>
 class HideString : protected xtea3
 {
@@ -79,7 +79,7 @@ class HideString : protected xtea3
     return c ^ _key;
   }
  public:
-  //Конструктор, где в начале строка пошифруется на этапе компиляции XOR, а потом на этапе исполнения программы XTEA3
+  // Constructor
   template < size_t... Is >
   constexpr __forceinline HideString(const char *str, std::index_sequence< Is... >)
     : _key(RandomChar< K >::value),
@@ -90,28 +90,28 @@ class HideString : protected xtea3
 
   }
   {
-    //Получить число, для генерации ключа для xtea3
+    // key for xtea3
     uint32_t value_for_gen_key = randkey;
-    //Генерация пароля для XTEA3
+    // gen pass for XTEA3
     for (int i = 0; i < 8; i++)
     {
       key_for_xtea3[i] = Murmur3(&value_for_gen_key, sizeof(value_for_gen_key), i);
     }
-    //Зашифровать данные
+    // crypt
     crypted_str = data_crypt((const uint8_t *)_encrypted.data(), key_for_xtea3, N);
   }
 
-//Получит указатель на рашифрованную строку
+  // pointer for decrypted string
   __forceinline uint8_t *decrypt(void)
   {
-    //Получить число, для генерации ключа для xtea3
+    // key for xtea3
     uint32_t value_for_gen_key = randkey;
-    //Генерация пароля для XTEA3
+    // gen pass for XTEA3
     for (int i = 0; i < 8; i++)
     {
       key_for_xtea3[i] = Murmur3(&value_for_gen_key, sizeof(value_for_gen_key), i);
     }
-    //Расшифровать данные
+    // decrypt
     uint8_t *decrypted_str = data_decrypt(crypted_str, key_for_xtea3, this->get_crypt_size());
     if (decrypted_str == NULL) return NULL;
     for (size_t i = 0; i < N; ++i)
@@ -122,13 +122,13 @@ class HideString : protected xtea3
     return decrypted_str;
   }
 
-  //Получит указатель на зашифрованную строку
+  // pointer for encrypted string
   __forceinline uint8_t *crypt(void)
   {
     return crypted_str;
   }
 
-  //Освобождение памяти
+  // free memory
   __forceinline void str_free(uint8_t *ptr)
   {
     free(ptr);
