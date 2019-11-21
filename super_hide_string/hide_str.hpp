@@ -3,7 +3,7 @@
 #include <cstdarg>
 #include <random>
 
-#define mmix(h,k) { k *= m; k ^= k >> r; k *= m; h *= m; h ^= k; }
+#define MMIX(h,k) { k *= m; k ^= k >> r; k *= m; h *= m; h ^= k; }
 #define DEBUG_PRINT(m,...) //printf(m,__VA_ARGS__)
 #define BLOCK_SIZE 16
 
@@ -21,7 +21,7 @@ inline uint32_t Murmur3(const void *key, int len, unsigned int seed)
   while (len >= 4)
   {
     k = *(unsigned int *)data;
-    mmix(h, k);
+    MMIX(h, k);
     data += 4;
     len -= 4;
   }
@@ -32,26 +32,13 @@ inline uint32_t Murmur3(const void *key, int len, unsigned int seed)
     case 2: t ^= data[1] << 8;
     case 1: t ^= data[0];
   };
-  mmix(h, t);
-  mmix(h, l);
+  MMIX(h, t);
+  MMIX(h, l);
   h ^= h >> 13;
   h *= m;
   h ^= h >> 15;
   return h;
 }
-int randInt() {
-  std::random_device random_device; // create object for seeding
-  std::mt19937 engine{ random_device() }; // create engine and seed it
-  std::uniform_int_distribution<> dist(10000000, 90000000); // create distribution for integers with [1; 9] range
-  return dist(engine);
-}
-
-static uint8_t *data_ptr = NULL;
-static uint32_t size_crypt = 0;
-static uint32_t size_decrypt_data = 0;
-
-
-int randkey = randInt();
 
 constexpr auto time = __TIME__;
 constexpr auto seed =
@@ -96,6 +83,11 @@ struct RandomChar
 
 class XTEA3
 {
+ public:
+  uint8_t *data_ptr = nullptr;
+  uint32_t size_crypt = 0;
+  uint32_t size_decrypt_data = 0;
+
  protected:
   uint32_t rol(uint32_t base, uint32_t shift)
   {
@@ -284,7 +276,7 @@ class HideString : protected XTEA3
   }
   {
     // key for xtea3
-    uint32_t value_for_gen_key = randkey;
+    uint32_t value_for_gen_key = seed;
     // gen pass for XTEA3
     for (int i = 0; i < 8; i++)
     {
@@ -298,7 +290,7 @@ class HideString : protected XTEA3
   __forceinline uint8_t *decrypt(void)
   {
     // key for xtea3
-    uint32_t value_for_gen_key = randkey;
+    uint32_t value_for_gen_key = seed;
     // gen pass for XTEA3
     for (int i = 0; i < 8; i++)
     {
